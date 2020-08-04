@@ -1,0 +1,7 @@
+#import "./requisiteFields.graphql"
+
+query Requisites($projectId: String!) {
+  requisites(projectId: $projectId) {
+    ...requisiteFields
+  }
+}

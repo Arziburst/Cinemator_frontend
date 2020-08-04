@@ -1,0 +1,7 @@
+#import "./workdayFields.graphql"
+
+query Workdays ($projectId: String!) {
+  workdays(projectId: $projectId) {
+    ...workdayFields
+  }
+}

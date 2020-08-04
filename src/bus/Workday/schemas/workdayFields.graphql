@@ -1,0 +1,13 @@
+fragment workdayFields on Workday {
+    id
+    date
+    description
+    scenes {
+      id
+      number
+      isCompleted
+      requisites {
+        id
+      }
+    }
+}

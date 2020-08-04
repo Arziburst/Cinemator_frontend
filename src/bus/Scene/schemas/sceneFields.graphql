@@ -1,0 +1,19 @@
+fragment sceneFields on Scene {
+    id
+    number
+    title
+    description
+    isCompleted
+    locations {
+      id
+      name
+    }
+    workdays {
+      id
+      date
+    }
+    requisites {
+      id
+      title
+    }
+}

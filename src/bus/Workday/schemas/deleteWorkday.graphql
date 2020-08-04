@@ -1,0 +1,3 @@
+mutation DeleteWorkday ($workdayId: String!) {
+  deleteWorkday(workdayId: $workdayId)
+}

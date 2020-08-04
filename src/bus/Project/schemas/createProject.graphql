@@ -1,0 +1,7 @@
+#import "./projectFields.graphql"
+
+mutation CreateProject($input: ProjectCreateInput!) {
+    createProject(input: $input) {
+        ...projectFields
+    }
+}

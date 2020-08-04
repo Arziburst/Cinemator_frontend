@@ -1,0 +1,10 @@
+#import "./userFields.graphql"
+
+mutation Register ($input: AuthInput!) {
+    registerWeb(input: $input) {
+        user {
+            ...userFields
+        }
+        accessToken
+    }
+}

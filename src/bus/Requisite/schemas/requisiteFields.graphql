@@ -1,0 +1,14 @@
+fragment requisiteFields on Requisite {
+    id
+    number
+    title
+    description
+    scenes {
+      id
+      number
+    }
+    reqTypes {
+      id
+      name
+    }
+}
