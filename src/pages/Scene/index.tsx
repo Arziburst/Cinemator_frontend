@@ -1,5 +1,5 @@
 // Core
-import React, { FC, useContext, useEffect } from 'react';
+import React, { FC, useContext, useEffect, useRef } from 'react';
 import { useHistory, useParams, Route, Switch } from 'react-router-dom';
 import { ThemeContext } from 'styled-components';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -11,7 +11,7 @@ import { RequisitesModal, LocationsModal, WorkdaysModal } from '../../containers
 // Components
 import { ErrorBoundary, RequisitesTable } from '../../components';
 
-// Apollo hooks
+// Apollo
 import {
     useScenesQuery,
     useUpdateSceneWorkdaysMutation,
@@ -20,8 +20,11 @@ import {
 } from '../../bus/Scene';
 import { useRequisitesQuery } from '../../bus/Requisite';
 
+// Redux
+import { useTogglersRedux } from '../../@init/redux/togglers';
+
 // Elements
-import { Button, Spinner } from '../../elements';
+import { Button, Spinner, AdaptiveScroll } from '../../elements';
 
 // Styles
 import { Container, Header, Info, Relations } from './styles';
@@ -35,10 +38,12 @@ type Params = {
 const Scene: FC = () => {
     const { push } = useHistory();
     const { projectId, sceneId } = useParams<Params>();
+    const headerRef = useRef<HTMLElement>(null);
     const theme = useContext(ThemeContext);
+    const { togglersRedux: { isOnline }} = useTogglersRedux();
 
-    const { data, loading } = useScenesQuery({ projectId });
-    const { data: requisiteData, loading: requisiteLoading } = useRequisitesQuery({ projectId });
+    const { data } = useScenesQuery({ projectId });
+    const { data: requisiteData } = useRequisitesQuery({ projectId });
 
     const [ updateSceneWorkdays, { loading: updateSceneWorkdaysLoading }] = useUpdateSceneWorkdaysMutation();
     const [ updateSceneRequisites, { loading: updateSceneRequisitesLoading }] = useUpdateSceneRequisitesMutation();
@@ -58,7 +63,7 @@ const Scene: FC = () => {
         workdayIdsArray && void setInitialWorkdayIds(workdayIdsArray);
     }, [ scene ]);
 
-    if (loading || !data || requisiteLoading || !requisiteData) {
+    if (!data || !requisiteData) {
         return <Spinner />;
     }
 
@@ -129,7 +134,7 @@ const Scene: FC = () => {
                     />
                 </Route>
             </Switch>
-            <Header>
+            <Header ref = { headerRef }>
                 <nav>
                     <Button
                         style = {{ width: 55 }}
@@ -164,6 +169,7 @@ const Scene: FC = () => {
                 </h2>
                 <nav>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Add workdays'
                         onClick = { () => void push(`/${projectId}/scenes/${sceneId}/add-workdays`) }>
                         <div style = {{ display: 'flex', alignItems: 'center' }}>
@@ -176,6 +182,7 @@ const Scene: FC = () => {
                         </div>
                     </Button>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Add requisites'
                         onClick = { () => void push(`/${projectId}/scenes/${sceneId}/add-requisites`) }>
                         <div style = {{ display: 'flex', alignItems: 'center' }}>
@@ -188,6 +195,7 @@ const Scene: FC = () => {
                         </div>
                     </Button>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Add locations'
                         onClick = { () => void push(`/${projectId}/scenes/${sceneId}/locations`) }>
                         <div style = {{ display: 'flex', alignItems: 'center' }}>
@@ -200,6 +208,7 @@ const Scene: FC = () => {
                         </div>
                     </Button>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Settings'
                         onClick = { () => void push(`/${projectId}/update-scene/${sceneId}`) }>
                         <FontAwesomeIcon
@@ -210,51 +219,53 @@ const Scene: FC = () => {
                     </Button>
                 </nav>
             </Header>
-            {
-                (scene.title || scene.description) && (
-                    <Info>
-                        {scene.title && <div><p>{scene.title}</p></div>}
-                        {scene.description && <div><span>{scene.description}</span></div>}
-                    </Info>
-                )
-            }
-            <Relations>
+            <AdaptiveScroll refs = { [ headerRef ] }>
                 {
-                    scene.workdays.length !== 0 && (
-                        <section style = {{ backgroundColor: theme.workday.containerBg }}>
-                            {
-                                scene.workdays.map((workday) => (
-                                    <Button
-                                        key = { workday.id }
-                                        style = {{ backgroundColor: theme.workday.anotherSecondary, color: '#fff' }}
-                                        onClick = { (event) => void workdayRedirectHandler(event, workday.id) }>
-                                        {workday.date}
-                                    </Button>
-                                ))
-                            }
-                        </section>
+                    (scene.title || scene.description) && (
+                        <Info>
+                            {scene.title && <div><p>{scene.title}</p></div>}
+                            {scene.description && <div><span>{scene.description}</span></div>}
+                        </Info>
                     )
                 }
-                {
-                    scene.locations.length !== 0 && (
-                        <section style = {{ backgroundColor: theme.scene.hoverSecondary }}>
-                            {
-                                scene.locations.map((location) => (
-                                    <Button
-                                        key = { location.id }
-                                        style = {{ backgroundColor: theme.scene.locationPrimary, color: '#fff' }}>
-                                        {location.name}
-                                    </Button>
-                                ))
-                            }
-                        </section>
-                    )
-                }
-            </Relations>
-            <RequisitesTable
-                requisites = { sceneRequisites }
-                sceneId = { sceneId }
-            />
+                <Relations>
+                    {
+                        scene.workdays.length !== 0 && (
+                            <section style = {{ backgroundColor: theme.workday.containerBg }}>
+                                {
+                                    scene.workdays.map((workday) => (
+                                        <Button
+                                            key = { workday.id }
+                                            style = {{ backgroundColor: theme.workday.anotherSecondary, color: '#fff' }}
+                                            onClick = { (event) => void workdayRedirectHandler(event, workday.id) }>
+                                            {workday.date}
+                                        </Button>
+                                    ))
+                                }
+                            </section>
+                        )
+                    }
+                    {
+                        scene.locations.length !== 0 && (
+                            <section style = {{ backgroundColor: theme.scene.hoverSecondary }}>
+                                {
+                                    scene.locations.map((location) => (
+                                        <Button
+                                            key = { location.id }
+                                            style = {{ backgroundColor: theme.scene.locationPrimary, color: '#fff' }}>
+                                            {location.name}
+                                        </Button>
+                                    ))
+                                }
+                            </section>
+                        )
+                    }
+                </Relations>
+                <RequisitesTable
+                    requisites = { sceneRequisites }
+                    sceneId = { sceneId }
+                />
+            </AdaptiveScroll>
         </Container>
     );
 };

@@ -1,5 +1,5 @@
 // Core
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useRef } from 'react';
 import { useHistory, useParams, Route } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import _intersectionWith from 'lodash/intersectionWith';
@@ -15,11 +15,14 @@ import { useWorkdaysQuery } from '../../bus/Workday';
 import { useScenesQuery } from '../../bus/Scene';
 import { useUpdateWorkdayScenesMutation } from '../../bus/Workday';
 
+// Redux
+import { useTogglersRedux } from '../../@init/redux/togglers';
+
 // Hooks
 import { useArrayOfStringsForm } from '../../hooks';
 
 // Elements
-import { Button, Spinner } from '../../elements';
+import { Button, Spinner, AdaptiveScroll } from '../../elements';
 
 // Styles
 import { Container, Header, Info } from './styles';
@@ -33,13 +36,12 @@ type Params = {
 const Workday: FC = () => {
     const { push } = useHistory();
     const { projectId, workdayId } = useParams<Params>();
-    const { data, loading } = useWorkdaysQuery({ projectId });
-    const { data: scenesData, loading: scenesLoading } = useScenesQuery({ projectId });
-
-    const [ updateWorkdayScenes, { loading: updateWorkdayScenesLoading }] = useUpdateWorkdayScenesMutation({
-        projectId,
-    });
+    const headerRef = useRef<HTMLElement>(null);
+    const { data } = useWorkdaysQuery({ projectId });
+    const { data: scenesData } = useScenesQuery({ projectId });
+    const [ updateWorkdayScenes, { loading: updateWorkdayScenesLoading }] = useUpdateWorkdayScenesMutation();
     const [ sceneIds, setSceneIds, setInitialSceneIds ] = useArrayOfStringsForm([]);
+    const { togglersRedux: { isOnline }} = useTogglersRedux();
 
     const workday = data?.workdays.find((workday) => workday.id === workdayId);
     const sceneIdsArray = workday?.scenes.map((scene) => scene.id);
@@ -48,7 +50,7 @@ const Workday: FC = () => {
         sceneIdsArray && void setInitialSceneIds(sceneIdsArray);
     }, [ workday ]);
 
-    if (loading || !data || scenesLoading || !scenesData) {
+    if (!data || !scenesData) {
         return <Spinner />;
     }
 
@@ -81,7 +83,7 @@ const Workday: FC = () => {
                     sceneIds = { sceneIds }
                 />
             </Route>
-            <Header>
+            <Header ref = { headerRef }>
                 <nav>
                     <Button
                         style = {{ width: 55 }}
@@ -102,6 +104,7 @@ const Workday: FC = () => {
                 <h2>W: {workday.date}</h2>
                 <nav>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Add scenes'
                         onClick = { () => void push(`/${projectId}/calendar/${workdayId}/add-scenes`) }>
                         <div style = {{ display: 'flex', alignItems: 'center' }}>
@@ -114,6 +117,7 @@ const Workday: FC = () => {
                         </div>
                     </Button>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Settings'
                         onClick = { () => void push(`/${projectId}/update-workday/${workdayId}`) }>
                         <FontAwesomeIcon
@@ -124,17 +128,19 @@ const Workday: FC = () => {
                     </Button>
                 </nav>
             </Header>
-            {
-                workday.description && (
-                    <Info>
-                        {workday.description && <div><span>{workday.description}</span></div>}
-                    </Info>
-                )
-            }
-            <ScenesTable
-                scenes = { workdayScenes }
-                workdayId = { workdayId }
-            />
+            <AdaptiveScroll refs = { [ headerRef ] }>
+                {
+                    workday.description && (
+                        <Info>
+                            <div><span>{workday.description}</span></div>
+                        </Info>
+                    )
+                }
+                <ScenesTable
+                    scenes = { workdayScenes }
+                    workdayId = { workdayId }
+                />
+            </AdaptiveScroll>
         </Container>
     );
 };

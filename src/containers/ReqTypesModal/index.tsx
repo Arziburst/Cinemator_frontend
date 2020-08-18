@@ -1,10 +1,10 @@
 
 // Core
-import React, { FC, useContext, useState } from 'react';
+import React, { FC, useState, useRef, useContext } from 'react';
 import { useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useApolloClient } from '@apollo/client';
 import { ThemeContext } from 'styled-components';
-import { useApolloClient } from '@apollo/react-hooks';
 
 // Schemas
 import ReqTypesSchema from '../../bus/ReqType/schemas/reqTypes.graphql';
@@ -13,7 +13,7 @@ import RequisitesSchema from '../../bus/Requisite/schemas/requisites.graphql';
 // Components
 import { Modal, ReqTypesTable } from '../../components';
 
-// Apollo hooks
+// Apollo
 import {
     useReqTypesQuery,
     useCreateReqTypeMutation,
@@ -22,14 +22,17 @@ import {
 } from '../../bus/ReqType';
 import { useRequisitesQuery } from '../../bus/Requisite';
 
+// Redux
+import { useTogglersRedux } from '../../@init/redux/togglers';
+
 // Hooks
 import { useForm } from '../../hooks';
 
 // Elements
-import { ModalHeader, Button, Input } from '../../elements';
+import { Button, Input, AdaptiveScroll } from '../../elements';
 
 // Styles
-import { Main, Footer, IconsContainer, Icon } from './styles';
+import { Header, Footer, IconsContainer, Icon } from './styles';
 
 // Types
 type Params = { projectId: string }
@@ -53,18 +56,25 @@ export const ReqTypesModal: FC<PropTypes> = ({
 }) => {
     const { projectId } = useParams<Params>();
     const theme = useContext(ThemeContext);
+    const headerRef = useRef<HTMLElement>(null);
+    const IconsContainerRef = useRef<HTMLElement>(null);
+    const footerRef = useRef<HTMLElement>(null);
+    const { togglersRedux: { isOnline }} = useTogglersRedux();
+
     const client = useApolloClient();
-    const { data, loading } = useReqTypesQuery({ projectId });
-    const { data: requisitesData, loading: requisitesLoading } = useRequisitesQuery({ projectId });
+    const { data } = useReqTypesQuery({ projectId });
+    const { data: requisitesData } = useRequisitesQuery({ projectId });
     const [ createReqType, { loading: createReqTypeLoading }] = useCreateReqTypeMutation({ projectId });
     const [ updateReqType, { loading: updateReqTypeLoading }] = useUpdateReqTypeMutation();
     const [ deleteReqType, { loading: deleteReqTypeLoading }] = useDeleteReqTypeMutation();
+
     const [ form, setForm, _, resetForm ] = useForm<typeof initialForm>(initialForm); // eslint-disable-line @typescript-eslint/no-unused-vars
     const [ isPlusRotate, setPlusRotateState ] = useState(false);
     const [ isTrashRotate, setTrashRotateState ] = useState(false);
+
     const isSpinnerActive = saveHandlerLoading || createReqTypeLoading || updateReqTypeLoading || deleteReqTypeLoading;
 
-    if (loading || !data || requisitesLoading || !requisitesData) {
+    if (!data || !requisitesData) {
         return null;
     }
 
@@ -174,8 +184,8 @@ export const ReqTypesModal: FC<PropTypes> = ({
         <Modal
             closeHandler = { closeHandler }
             spinner = { isSpinnerActive }>
-            <ModalHeader style = {{ backgroundColor: theme.requisite.secondary }}>Types</ModalHeader>
-            <IconsContainer>
+            <Header ref = { headerRef }><h2>Types</h2></Header>
+            <IconsContainer ref = { IconsContainerRef }>
                 <section>
                     <Icon
                         isRotate = { isPlusRotate }
@@ -183,7 +193,12 @@ export const ReqTypesModal: FC<PropTypes> = ({
                         <FontAwesomeIcon
                             color = '#000'
                             icon = 'plus'
-                            style = {{ width: 20, height: 20 }}
+                            style = { Object.assign(
+                                { width: 20, height: 20 },
+                                !isOnline || form.reqType === ''
+                                    ? { opacity: 0.5, cursor: 'not-allowed' }
+                                    : {},
+                            ) }
                             title = { 'Add location' }
                         />
                     </Icon>
@@ -205,7 +220,10 @@ export const ReqTypesModal: FC<PropTypes> = ({
                     onChange = { setForm }
                 />
             </IconsContainer>
-            <Main>
+            <AdaptiveScroll
+                minHeight
+                backgroundColor = { theme.requisite.containerBg }
+                refs = { [ headerRef, IconsContainerRef, footerRef ] }>
                 <ReqTypesTable
                     deleteReqTypeHandler = { deleteReqTypeHandler }
                     handler = { handler }
@@ -213,9 +231,10 @@ export const ReqTypesModal: FC<PropTypes> = ({
                     reqTypes = { filterHandler() }
                     updateReqTypeHandler = { updateReqTypeHandler }
                 />
-            </Main>
-            <Footer>
+            </AdaptiveScroll>
+            <Footer ref = { footerRef }>
                 <Button
+                    disabled = { saveHandler ? !isOnline : false }
                     title = { saveHandler ? 'Save' : 'Close' }
                     onClick = { () => saveHandler ? void saveHandler() : void closeHandler() }>
                     <FontAwesomeIcon

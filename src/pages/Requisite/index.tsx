@@ -1,5 +1,5 @@
 // Core
-import React, { FC, useEffect, useContext } from 'react';
+import React, { FC, useEffect, useContext, useRef } from 'react';
 import { useHistory, useParams, Route, Switch } from 'react-router-dom';
 import { ThemeContext } from 'styled-components';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -10,18 +10,21 @@ import { ScenesModal, ReqTypesModal } from '../../containers';
 // Components
 import { ErrorBoundary } from '../../components';
 
-// Apollo hooks
+// Apollo
 import {
     useRequisitesQuery,
     useUpdateRequisiteScenesMutation,
     useUpdateRequisiteReqTypesMutation,
 } from '../../bus/Requisite';
 
+// Redux
+import { useTogglersRedux } from '../../@init/redux/togglers';
+
 // Hooks
 import { useArrayOfStringsForm } from '../../hooks';
 
 // Elements
-import { Button, Spinner } from '../../elements';
+import { Button, Spinner, AdaptiveScroll } from '../../elements';
 
 // Styles
 import { Container, Header, Info, Relations } from './styles';
@@ -35,8 +38,11 @@ type Params = {
 const Requisite: FC = () => {
     const { push } = useHistory();
     const { projectId, requisiteId } = useParams<Params>();
+    const headerRef = useRef<HTMLElement>(null);
     const theme = useContext(ThemeContext);
-    const { data, loading } = useRequisitesQuery({ projectId });
+    const { togglersRedux: { isOnline }} = useTogglersRedux();
+
+    const { data } = useRequisitesQuery({ projectId });
     const [ updateRequisiteScenes, { loading: updateRequisiteScenesLoading }] = useUpdateRequisiteScenesMutation();
     const [ updateRequisiteReqTypes, { loading: updateRequisiteReqTypesLoading }] = useUpdateRequisiteReqTypesMutation(); // eslint-disable-line max-len
 
@@ -51,7 +57,7 @@ const Requisite: FC = () => {
         requisite && void setInitialReqTypeIds(requisite.reqTypes.map((reqType) => reqType.id));
     }, [ requisite ]);
 
-    if (loading || !data) {
+    if (!data) {
         return <Spinner />;
     }
 
@@ -98,7 +104,7 @@ const Requisite: FC = () => {
                     />
                 </Route>
             </Switch>
-            <Header>
+            <Header ref = { headerRef }>
                 <nav>
                     <Button
                         style = {{ width: 55 }}
@@ -119,6 +125,7 @@ const Requisite: FC = () => {
                 <h2>R: {requisite.number}</h2>
                 <nav>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Add scenes'
                         onClick = { () => void push(`/${projectId}/requisites/${requisiteId}/add-scenes`) }>
                         <div style = {{ display: 'flex', alignItems: 'center' }}>
@@ -131,6 +138,7 @@ const Requisite: FC = () => {
                         </div>
                     </Button>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Add types'
                         onClick = { () => void push(`/${projectId}/requisites/${requisiteId}/types`) }>
                         <div style = {{ display: 'flex', alignItems: 'center' }}>
@@ -143,6 +151,7 @@ const Requisite: FC = () => {
                         </div>
                     </Button>
                     <Button
+                        disabled = { !isOnline }
                         title = 'Settings'
                         onClick = { () => void push(`/${projectId}/update-requisite/${requisiteId}`) }>
                         <FontAwesomeIcon
@@ -153,43 +162,45 @@ const Requisite: FC = () => {
                     </Button>
                 </nav>
             </Header>
-            <Info>
-                <div><p>{requisite.title}</p></div>
-                {requisite.description && <div><span>{requisite.description}</span></div>}
-            </Info>
-            <Relations>
-                {
-                    requisite.reqTypes.length !== 0 && (
-                        <section style = {{ backgroundColor: theme.requisite.hoverSecondary }}>
-                            {
-                                requisite.reqTypes.map((reqTypes) => (
-                                    <Button
-                                        key = { reqTypes.id }
-                                        style = {{ backgroundColor: theme.requisite.primary, color: '#fff' }}>
-                                        {reqTypes.name}
-                                    </Button>
-                                ))
-                            }
-                        </section>
-                    )
-                }
-                {
-                    requisite.scenes.length !== 0 && (
-                        <section style = {{ backgroundColor: theme.scene.hoverSecondary }}>
-                            {
-                                requisite.scenes.map((scene) => (
-                                    <Button
-                                        key = { scene.id }
-                                        style = {{ backgroundColor: theme.scene.secondary, color: '#fff' }}
-                                        onClick = { () => void sceneRedirectHandler(scene.id) }>
-                                        S:{scene.number}
-                                    </Button>
-                                ))
-                            }
-                        </section>
-                    )
-                }
-            </Relations>
+            <AdaptiveScroll refs = { [ headerRef ] }>
+                <Info>
+                    <div><p>{requisite.title}</p></div>
+                    {requisite.description && <div><span>{requisite.description}</span></div>}
+                </Info>
+                <Relations>
+                    {
+                        requisite.reqTypes.length !== 0 && (
+                            <section style = {{ backgroundColor: theme.requisite.hoverSecondary }}>
+                                {
+                                    requisite.reqTypes.map((reqTypes) => (
+                                        <Button
+                                            key = { reqTypes.id }
+                                            style = {{ backgroundColor: theme.requisite.primary, color: '#fff' }}>
+                                            {reqTypes.name}
+                                        </Button>
+                                    ))
+                                }
+                            </section>
+                        )
+                    }
+                    {
+                        requisite.scenes.length !== 0 && (
+                            <section style = {{ backgroundColor: theme.scene.hoverSecondary }}>
+                                {
+                                    requisite.scenes.map((scene) => (
+                                        <Button
+                                            key = { scene.id }
+                                            style = {{ backgroundColor: theme.scene.secondary, color: '#fff' }}
+                                            onClick = { () => void sceneRedirectHandler(scene.id) }>
+                                            S:{scene.number}
+                                        </Button>
+                                    ))
+                                }
+                            </section>
+                        )
+                    }
+                </Relations>
+            </AdaptiveScroll>
         </Container>
     );
 };

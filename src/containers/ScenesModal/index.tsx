@@ -1,6 +1,6 @@
 
 // Core
-import React, { FC, useContext, useState } from 'react';
+import React, { FC, useContext, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ThemeContext } from 'styled-components';
@@ -11,11 +11,14 @@ import { Modal, ScenesTable } from '../../components';
 // Apollo hooks
 import { useScenesQuery } from '../../bus/Scene';
 
+// Redux
+import { useTogglersRedux } from '../../@init/redux/togglers';
+
 // Elements
-import { ModalHeader, Button } from '../../elements';
+import { AdaptiveScroll, Button } from '../../elements';
 
 // Styles
-import { Main, Footer } from './styles';
+import { Header, Footer } from './styles';
 
 // Types
 type Params = {
@@ -35,10 +38,14 @@ export const ScenesModal: FC<PropTypes> = ({
 }) => {
     const { projectId } = useParams<Params>();
     const theme = useContext(ThemeContext);
-    const { data, loading } = useScenesQuery({ projectId });
+    const headerRef = useRef<HTMLElement>(null);
+    const footerRef = useRef<HTMLElement>(null);
+    const { togglersRedux: { isOnline }} = useTogglersRedux();
+
+    const { data } = useScenesQuery({ projectId });
     const [ index, setIndexUseState ] = useState(0);
 
-    if (loading || !data) {
+    if (!data) {
         return null;
     }
 
@@ -64,8 +71,11 @@ export const ScenesModal: FC<PropTypes> = ({
         <Modal
             closeHandler = { closeHandler }
             spinner = { saveHandlerLoading }>
-            <ModalHeader style = {{ backgroundColor: theme.scene.secondary }}>Scenes</ModalHeader>
-            <Main>
+            <Header ref = { headerRef }><h2>Scenes</h2></Header>
+            <AdaptiveScroll
+                minHeight
+                backgroundColor = { theme.scene.containerBg }
+                refs = { [ headerRef, footerRef ] }>
                 <ScenesTable
                     lightVersion
                     handler = { handler }
@@ -74,9 +84,10 @@ export const ScenesModal: FC<PropTypes> = ({
                     scenes = { filterHandler() }
                     setIndex = { (newIndex: number) => setIndexUseState(newIndex) }
                 />
-            </Main>
-            <Footer>
+            </AdaptiveScroll>
+            <Footer ref = { footerRef }>
                 <Button
+                    disabled = { !isOnline }
                     title = 'Save'
                     onClick = { () => saveHandler && void saveHandler() }>
                     <FontAwesomeIcon

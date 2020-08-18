@@ -1,14 +1,14 @@
 // Core
-import React, { FC, useContext } from 'react';
+import React, { FC, useContext, useRef } from 'react';
 import { useParams, useHistory, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ThemeContext } from 'styled-components';
 
 // Elements
-import { Button } from '../../../../elements';
+import { AdaptiveScroll, Button } from '../../../../elements';
 
 // Styles
-import { Header, Footer, Ul, Li } from './styles';
+import { Header, Title, Description, Footer, Ul, Li } from './styles';
 import { Section } from '../styles';
 
 // Type
@@ -34,6 +34,8 @@ export const ProjectNav: FC<PropTypes> = (props) => {
     const { projectId } = useParams<Params>();
     const { pathname } = useLocation();
     const theme = useContext(ThemeContext);
+    const navRef = useRef<HTMLElement>(null);
+    const footerRef = useRef<HTMLElement>(null);
 
     const customHoverColorHandler = (key: number) => {
         switch (key) {
@@ -47,7 +49,7 @@ export const ProjectNav: FC<PropTypes> = (props) => {
 
     return (
         <Section>
-            <div>
+            <nav ref = { navRef }>
                 <Header>
                     <nav>
                         <Button
@@ -77,20 +79,24 @@ export const ProjectNav: FC<PropTypes> = (props) => {
                         ))
                     }
                 </Ul>
-            </div>
+            </nav>
+            {
+                props.description && (
+                    <AdaptiveScroll refs = { [ navRef, footerRef ] }>
+                        <Description>{props.description}</Description>
+                    </AdaptiveScroll>
+                )
+            }
             <Footer>
-                <div>
-                    <h2>{props.title}</h2>
-                    {props.description && <p>Description: {props.description}</p>}
-                </div>
-                <nav>
+                <Title>{props.title}</Title>
+                <nav ref = { footerRef }>
                     <Button
                         title = 'Settings'
                         onClick = { () => props.setFlipped() }>
                         <FontAwesomeIcon
                             color = '#000'
                             icon = 'wrench'
-                            style = {{ width: 20, height: 20, margin: '0px 5px' }}
+                            style = {{ width: 26, height: 26 }}
                         />
                     </Button>
                 </nav>

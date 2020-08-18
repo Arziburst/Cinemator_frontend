@@ -1,10 +1,10 @@
 
 // Core
-import React, { FC, useContext, useState } from 'react';
+import React, { FC, useContext, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ThemeContext } from 'styled-components';
-import { useApolloClient } from '@apollo/react-hooks';
+import { useApolloClient } from '@apollo/client';
 
 // Schemas
 import LocationsSchema from '../../bus/Location/schemas/locations.graphql';
@@ -13,7 +13,7 @@ import ScenesSchema from '../../bus/Scene/schemas/scenes.graphql';
 // Components
 import { Modal, LocationsTable } from '../../components';
 
-// Apollo hooks
+// Apollo
 import {
     useLocationsQuery,
     useCreateLocationMutation,
@@ -22,14 +22,17 @@ import {
 } from '../../bus/Location';
 import { useScenesQuery } from '../../bus/Scene';
 
+// Redux
+import { useTogglersRedux } from '../../@init/redux/togglers';
+
 // Hooks
 import { useForm } from '../../hooks';
 
 // Elements
-import { ModalHeader, Button, Input } from '../../elements';
+import { AdaptiveScroll, Button, Input } from '../../elements';
 
 // Styles
-import { Main, Footer, IconsContainer, Icon } from './styles';
+import { Header, Footer, IconsContainer, Icon } from './styles';
 
 // Types
 type Params = { projectId: string }
@@ -53,19 +56,26 @@ export const LocationsModal: FC<PropTypes> = ({
 }) => {
     const { projectId } = useParams<Params>();
     const theme = useContext(ThemeContext);
+    const headerRef = useRef<HTMLElement>(null);
+    const IconsContainerRef = useRef<HTMLElement>(null);
+    const footerRef = useRef<HTMLElement>(null);
+    const { togglersRedux: { isOnline }} = useTogglersRedux();
+
     const client = useApolloClient();
-    const { data, loading } = useLocationsQuery({ projectId });
-    const { data: scenesData, loading: scenesLoading } = useScenesQuery({ projectId });
+    const { data } = useLocationsQuery({ projectId });
+    const { data: scenesData } = useScenesQuery({ projectId });
     const [ createLocation, { loading: createLocationLoading }] = useCreateLocationMutation({ projectId });
     const [ updateLocation, { loading: updateLocationLoading }] = useUpdateLocationMutation();
     const [ deleteLocation, { loading: deleteLocationLoading }] = useDeleteLocationMutation();
+
     const [ form, setForm, _, resetForm ] = useForm<typeof initialForm>(initialForm); // eslint-disable-line @typescript-eslint/no-unused-vars
     const [ isPlusRotate, setPlusRotateState ] = useState(false);
     const [ isTrashRotate, setTrashRotateState ] = useState(false);
+
     const isSpinnerActive = saveHandlerLoading || createLocationLoading
         || updateLocationLoading || deleteLocationLoading;
 
-    if (loading || !data || scenesLoading || !scenesData) {
+    if (!data || !scenesData) {
         return null;
     }
 
@@ -169,8 +179,8 @@ export const LocationsModal: FC<PropTypes> = ({
         <Modal
             closeHandler = { closeHandler }
             spinner = { isSpinnerActive }>
-            <ModalHeader style = {{ backgroundColor: theme.scene.secondary }}>Locations</ModalHeader>
-            <IconsContainer>
+            <Header ref = { headerRef }><h2>Locations</h2></Header>
+            <IconsContainer ref = { IconsContainerRef }>
                 <section>
                     <Icon
                         isRotate = { isPlusRotate }
@@ -178,7 +188,13 @@ export const LocationsModal: FC<PropTypes> = ({
                         <FontAwesomeIcon
                             color = '#000'
                             icon = 'plus'
-                            style = {{ width: 20, height: 20 }}
+                            style = {
+                                Object.assign(
+                                    { width: 20, height: 20 },
+                                    !isOnline || form.location === ''
+                                        ? { opacity: 0.5, cursor: 'not-allowed' }
+                                        : {},
+                                ) }
                             title = { 'Add location' }
                         />
                     </Icon>
@@ -200,7 +216,10 @@ export const LocationsModal: FC<PropTypes> = ({
                     onChange = { setForm }
                 />
             </IconsContainer>
-            <Main>
+            <AdaptiveScroll
+                minHeight
+                backgroundColor = { theme.scene.containerBg }
+                refs = { [ headerRef, IconsContainerRef, footerRef ] }>
                 <LocationsTable
                     deleteLocationHandler = { deleteLocationHandler }
                     handler = { handler }
@@ -208,9 +227,10 @@ export const LocationsModal: FC<PropTypes> = ({
                     locations = { filterHandler() }
                     updateLocationHandler = { updateLocationHandler }
                 />
-            </Main>
-            <Footer>
+            </AdaptiveScroll>
+            <Footer ref = { footerRef }>
                 <Button
+                    disabled = { saveHandler ? !isOnline : false }
                     title = { saveHandler ? 'Save' : 'Close' }
                     onClick = { () => saveHandler ? void saveHandler() : void closeHandler() }>
                     <FontAwesomeIcon
